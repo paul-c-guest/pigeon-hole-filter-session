@@ -1,9 +1,9 @@
+import java.awt.Color;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,9 +47,10 @@ public class Feather {
 		frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
+		frame.getContentPane().setBackground(Color.BLACK);
 
 		device.setFullScreenWindow(frame);
-		
+
 		SCREEN_WIDTH = device.getDisplayMode().getWidth();
 		SCREEN_HEIGHT = device.getDisplayMode().getHeight();
 
@@ -73,7 +74,6 @@ public class Feather {
 				File file = files[i];
 				try {
 					if (file.isFile() && isJpeg(file.getName())) {
-//						System.out.println(file.getName());
 						readyForNext = false;
 
 						previousImage = currentImage;
@@ -173,6 +173,12 @@ public class Feather {
 					moveFile(file, EMPTY);
 					break;
 
+				// skip
+				case 's':
+				case 'S':
+					readyForNext = true;
+					break;
+
 				// exit clauses
 				case 'x':
 				case 'X':
@@ -183,25 +189,6 @@ public class Feather {
 				}
 			}
 		};
-	}
-
-	private double getDownscaleFitFactor(int imageWidth, int imageHeight) {
-		double defaultFactor = 1d;
-		double downscaleFactor = 1d;
-
-		double scaleWidth = getScaleFactor(imageWidth, SCREEN_WIDTH);
-		double scaleHeight = getScaleFactor(imageHeight, SCREEN_HEIGHT);
-		downscaleFactor = (scaleWidth < scaleHeight) ? scaleWidth : scaleHeight;
-
-		return (downscaleFactor < defaultFactor) ? downscaleFactor : defaultFactor;
-	}
-
-	private static double getScaleFactor(int imageDimension, int screenDimension) {
-		double factor = 1d;
-		if (imageDimension > screenDimension) {
-			factor = (double) screenDimension / (double) imageDimension;
-		}
-		return (factor > 0) ? factor : 1d;
 	}
 
 	private boolean hasImages(File[] files) {
@@ -228,6 +215,25 @@ public class Feather {
 		}
 	}
 
+	private double getDownscaleFitFactor(int imageWidth, int imageHeight) {
+		double defaultFactor = 1d;
+		double downscaleFactor = 1d;
+
+		double scaleWidth = getScaleFactor(imageWidth, SCREEN_WIDTH);
+		double scaleHeight = getScaleFactor(imageHeight, SCREEN_HEIGHT);
+		downscaleFactor = (scaleWidth < scaleHeight) ? scaleWidth : scaleHeight;
+
+		return (downscaleFactor < defaultFactor) ? downscaleFactor : defaultFactor;
+	}
+
+	private static double getScaleFactor(int imageDimension, int screenDimension) {
+		double factor = 1d;
+		if (imageDimension > screenDimension) {
+			factor = (double) screenDimension / (double) imageDimension;
+		}
+		return (factor > 0) ? factor : 1d;
+	}
+
 	private void constructDirectories() {
 		try {
 			String[] directories = { PARAKEET, MAMMAL, OTHER, EMPTY, FOGGY, BIRD };
@@ -249,6 +255,6 @@ public class Feather {
 	}
 
 	private static void displayHelp() {
-		System.out.println("run this program in a folder of unsorted feeder camera images");
+		System.out.println("run this in a folder of unsorted feeder camera images");
 	}
 }
