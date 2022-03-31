@@ -1,9 +1,9 @@
-import java.awt.Color;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,16 +16,18 @@ import javax.swing.JLabel;
 
 public class Feather {
 
-	JFrame frame;
-	boolean readyForNext;
-	boolean requestedToExit;
+	private JFrame frame;
+	private boolean readyForNext;
+	private boolean requestedToExit;
 
-	static String PARAKEET = "./Parakeets";
-	static String FOGGY = "./Foggy";
-	static String OTHER = "./Other";
-	static String BIRD = "./Birds";
-	static String MAMMAL = "./Mammals";
-	static String EMPTY = "./Empty";
+	private static String PARAKEET = "./Parakeets";
+	private static String FOGGY = "./Foggy";
+	private static String OTHER = "./Other";
+	private static String BIRD = "./Birds";
+	private static String MAMMAL = "./Mammals";
+	private static String EMPTY = "./Empty";
+
+	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 	public static void main(String[] args) {
 
@@ -38,20 +40,21 @@ public class Feather {
 	}
 
 	private Feather() {
-
-		JLabel currentImage = null;
-		JLabel previousImage = null;
-
 		GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice device = env.getDefaultScreenDevice();
-		frame = new JFrame();
 
+		frame = new JFrame();
 		frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
+
 		device.setFullScreenWindow(frame);
 		
-		int screenWidth = env.getMaximumWindowBounds().width;		
+		SCREEN_WIDTH = device.getDisplayMode().getWidth();
+		SCREEN_HEIGHT = device.getDisplayMode().getHeight();
+
+		JLabel currentImage = null;
+		JLabel previousImage = null;
 
 		File[] files = new File(".").listFiles();
 
@@ -70,16 +73,25 @@ public class Feather {
 				File file = files[i];
 				try {
 					if (file.isFile() && isJpeg(file.getName())) {
-						System.out.println(file.getName());
+//						System.out.println(file.getName());
 						readyForNext = false;
 
 						previousImage = currentImage;
-						
+
 						Image image = ImageIO.read(file);
-						image = image.getScaledInstance(screenWidth, -1, Image.SCALE_FAST);
+
+						int imageWidth = image.getWidth(null);
+						int imageHeight = image.getHeight(null);
+						double scaleFactor = getDownscaleFitFactor(imageWidth, imageHeight);
+
+						imageWidth = (int) (imageWidth * scaleFactor);
+						imageHeight = (int) (imageHeight * scaleFactor);
+
+						image = image.getScaledInstance(imageWidth, imageHeight, Image.SCALE_DEFAULT);
+
 						currentImage = new JLabel(new ImageIcon(image));
 						frame.add(currentImage);
-						
+
 						if (previousImage != null) {
 							frame.remove(previousImage);
 						}
@@ -96,7 +108,7 @@ public class Feather {
 					e.printStackTrace();
 				}
 			}
-			
+
 			while (!requestedToExit && !readyForNext) {
 				try {
 					Thread.sleep(10);
@@ -171,6 +183,25 @@ public class Feather {
 				}
 			}
 		};
+	}
+
+	private double getDownscaleFitFactor(int imageWidth, int imageHeight) {
+		double defaultFactor = 1d;
+		double downscaleFactor = 1d;
+
+		double scaleWidth = getScaleFactor(imageWidth, SCREEN_WIDTH);
+		double scaleHeight = getScaleFactor(imageHeight, SCREEN_HEIGHT);
+		downscaleFactor = (scaleWidth < scaleHeight) ? scaleWidth : scaleHeight;
+
+		return (downscaleFactor < defaultFactor) ? downscaleFactor : defaultFactor;
+	}
+
+	private static double getScaleFactor(int imageDimension, int screenDimension) {
+		double factor = 1d;
+		if (imageDimension > screenDimension) {
+			factor = (double) screenDimension / (double) imageDimension;
+		}
+		return (factor > 0) ? factor : 1d;
 	}
 
 	private boolean hasImages(File[] files) {
