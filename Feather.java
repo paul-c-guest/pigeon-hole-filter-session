@@ -1,11 +1,15 @@
+import java.awt.Color;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -16,12 +20,12 @@ public class Feather {
 	boolean readyForNext;
 	boolean requestedToExit;
 
-	static String PARAKEET = "./Parakeet";
+	static String PARAKEET = "./Parakeets";
 	static String FOGGY = "./Foggy";
 	static String OTHER = "./Other";
-	static String BIRD = "./Bird";
-	static String MAMMAL = "./Mammal";
-	static String NOTHING = "./Nothing";
+	static String BIRD = "./Birds";
+	static String MAMMAL = "./Mammals";
+	static String EMPTY = "./Empty";
 
 	public static void main(String[] args) {
 
@@ -46,6 +50,8 @@ public class Feather {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
 		device.setFullScreenWindow(frame);
+		
+		int screenWidth = env.getMaximumWindowBounds().width;		
 
 		File[] files = new File(".").listFiles();
 
@@ -59,23 +65,21 @@ public class Feather {
 		requestedToExit = false;
 
 		for (int i = 0; i < files.length; i++) {
-			while (!requestedToExit && !readyForNext) {
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
 
 			if (readyForNext) {
 				File file = files[i];
 				try {
 					if (file.isFile() && isJpeg(file.getName())) {
+						System.out.println(file.getName());
 						readyForNext = false;
 
 						previousImage = currentImage;
-						currentImage = new JLabel(new ImageIcon(file.getCanonicalPath()));
+						
+						Image image = ImageIO.read(file);
+						image = image.getScaledInstance(screenWidth, -1, Image.SCALE_FAST);
+						currentImage = new JLabel(new ImageIcon(image));
 						frame.add(currentImage);
+						
 						if (previousImage != null) {
 							frame.remove(previousImage);
 						}
@@ -89,6 +93,14 @@ public class Feather {
 					}
 
 				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			while (!requestedToExit && !readyForNext) {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
@@ -144,9 +156,9 @@ public class Feather {
 					moveFile(file, OTHER);
 					break;
 
-				case 'n':
-				case 'N':
-					moveFile(file, NOTHING);
+				case 'e':
+				case 'E':
+					moveFile(file, EMPTY);
 					break;
 
 				// exit clauses
@@ -171,7 +183,8 @@ public class Feather {
 	}
 
 	private boolean isJpeg(String path) {
-		return path.contains(".jpg") || path.contains(".jpeg");
+		String lowered = path.toLowerCase();
+		return lowered.contains(".jpg") || lowered.contains(".jpeg");
 	}
 
 	private void moveFile(File file, String target) {
@@ -186,7 +199,7 @@ public class Feather {
 
 	private void constructDirectories() {
 		try {
-			String[] directories = { PARAKEET, MAMMAL, OTHER, NOTHING, FOGGY, BIRD };
+			String[] directories = { PARAKEET, MAMMAL, OTHER, EMPTY, FOGGY, BIRD };
 
 			for (String target : directories) {
 				if (!new File(target).exists()) {
