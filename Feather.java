@@ -82,23 +82,20 @@ public class Feather {
 		goBack = false;
 
 		for (int i = 0; i < files.length; i++) {
-			System.out.println(i);
-			
+
 			if (goBack) {
 				if (lastMovedFile != null) {
 					i = goBackToIndex;
 					files[i] = lastMovedFile;
-					System.out.println("gone back to: " + i);
 				}
 				goBack = false;
 			}
-			
+
 			if (readyForNext) {
 				File file = files[i];
-				
+
 				try {
 					if (file.isFile() && isJpeg(file.getName())) {
-						System.out.println(file.getName() + " at index: " + i);
 						readyForNext = false;
 
 						previousImage = currentImage;
@@ -192,14 +189,18 @@ public class Feather {
 					moveFile(file, OTHER);
 					break;
 
-				case 83: // S - skip current
+				case 83: // S - skip: do nothing with current file
 					readyForNext = true;
 					break;
 
 				case 8:
-					goBack = true;
-					goBackToIndex = index - 1;
-					readyForNext = true;
+					if (!goBack) {
+						goBack = true;
+						goBackToIndex = index - 1; // TODO this is incorrect, decrementing index does not target correct previous file in files[index]
+						readyForNext = true;
+					} else {
+						// TODO inform user there is only one level of undo
+					}
 					break;
 
 				// exit clauses
