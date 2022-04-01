@@ -1,9 +1,12 @@
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,8 +51,11 @@ public class Feather {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
 		frame.getContentPane().setBackground(Color.BLACK);
-
 		device.setFullScreenWindow(frame);
+
+		BufferedImage nullCursorImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+		Cursor nullCursor = frame.getToolkit().createCustomCursor(nullCursorImage, new Point(), null);
+		frame.getContentPane().setCursor(nullCursor);
 
 		SCREEN_WIDTH = device.getDisplayMode().getWidth();
 		SCREEN_HEIGHT = device.getDisplayMode().getHeight();
