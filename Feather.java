@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import javax.imageio.ImageIO;
@@ -22,6 +23,7 @@ public class Feather {
 	private JFrame frame;
 	private boolean readyForNext;
 	private boolean requestedToExit;
+	private boolean goBack;
 
 	private static String PARAKEET = "./Parakeets";
 	private static String FOGGY = "./Foggy";
@@ -31,6 +33,10 @@ public class Feather {
 	private static String EMPTY = "./Empty";
 
 	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
+
+	File[] files;
+	File lastMovedFile;
+	int goBackToIndex;
 
 	public static void main(String[] args) {
 
@@ -63,9 +69,9 @@ public class Feather {
 		JLabel currentImage = null;
 		JLabel previousImage = null;
 
-		File[] files = new File(".").listFiles();
+		files = new File(".").listFiles();
 
-		if (hasImages(files)) {
+		if (dirContainsImages()) {
 			constructDirectories();
 		} else {
 			displayInvalidContentHelp();
@@ -73,13 +79,26 @@ public class Feather {
 
 		readyForNext = true;
 		requestedToExit = false;
+		goBack = false;
 
 		for (int i = 0; i < files.length; i++) {
-
+			System.out.println(i);
+			
+			if (goBack) {
+				if (lastMovedFile != null) {
+					i = goBackToIndex;
+					files[i] = lastMovedFile;
+					System.out.println("gone back to: " + i);
+				}
+				goBack = false;
+			}
+			
 			if (readyForNext) {
 				File file = files[i];
+				
 				try {
 					if (file.isFile() && isJpeg(file.getName())) {
+						System.out.println(file.getName() + " at index: " + i);
 						readyForNext = false;
 
 						previousImage = currentImage;
@@ -88,6 +107,7 @@ public class Feather {
 
 						int imageWidth = image.getWidth(null);
 						int imageHeight = image.getHeight(null);
+
 						double scaleFactor = getDownscaleFitFactor(imageWidth, imageHeight);
 
 						imageWidth = (int) (imageWidth * scaleFactor);
@@ -105,7 +125,7 @@ public class Feather {
 						for (KeyListener listener : frame.getKeyListeners()) {
 							frame.removeKeyListener(listener);
 						}
-						frame.addKeyListener(getDefaultKeyListener(file));
+						frame.addKeyListener(getDefaultKeyListener(file, i));
 
 						frame.setVisible(true);
 					}
@@ -134,7 +154,7 @@ public class Feather {
 		// TODO inform user of operation stats
 	}
 
-	private KeyListener getDefaultKeyListener(File file) {
+	private KeyListener getDefaultKeyListener(File file, int index) {
 		return new KeyListener() {
 
 			@Override
@@ -147,49 +167,44 @@ public class Feather {
 
 			@Override
 			public void keyPressed(KeyEvent e) {
-				switch (e.getKeyChar()) {
-
-				case 'p':
-				case 'P':
+				switch (e.getKeyCode()) {
+				case 80: // P
 					moveFile(file, PARAKEET);
 					break;
 
-				case 'm':
-				case 'M':
-					moveFile(file, MAMMAL);
-					break;
-
-				case 'b':
-				case 'B':
+				case 66: // B
 					moveFile(file, BIRD);
 					break;
 
-				case 'f':
-				case 'F':
-					moveFile(file, FOGGY);
-					break;
-
-				case 'o':
-				case 'O':
-					moveFile(file, OTHER);
-					break;
-
-				case 'e':
-				case 'E':
+				case 69: // E
 					moveFile(file, EMPTY);
 					break;
 
-				// skip
-				case 's':
-				case 'S':
+				case 77: // M
+					moveFile(file, MAMMAL);
+					break;
+
+				case 70: // F
+					moveFile(file, FOGGY);
+					break;
+
+				case 79: // O
+					moveFile(file, OTHER);
+					break;
+
+				case 83: // S - skip current
+					readyForNext = true;
+					break;
+
+				case 8:
+					goBack = true;
+					goBackToIndex = index - 1;
 					readyForNext = true;
 					break;
 
 				// exit clauses
-				case 'x':
-				case 'X':
-				case 'q':
-				case 'Q':
+				case 81: // Q
+				case 88: // X
 					requestedToExit = true;
 					break;
 				}
@@ -197,7 +212,7 @@ public class Feather {
 		};
 	}
 
-	private boolean hasImages(File[] files) {
+	private boolean dirContainsImages() {
 		for (File file : files) {
 			if (isJpeg(file.getName())) {
 				return true;
@@ -213,7 +228,8 @@ public class Feather {
 
 	private void moveFile(File file, String target) {
 		try {
-			Files.move(file.toPath(), Paths.get(target + "/" + file.getName()));
+			Path moved = Files.move(file.toPath(), Paths.get(target + "/" + file.getName()));
+			lastMovedFile = new File(moved.toString());
 			readyForNext = true;
 
 		} catch (IOException moveException) {
