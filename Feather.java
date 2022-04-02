@@ -49,6 +49,20 @@ public class Feather {
 	}
 
 	private Feather() {
+		files = new File(".").listFiles();
+
+		if (dirContainsImages()) {
+			constructDirectories();
+			doMainRoutine();
+			frame.setVisible(false);
+			frame.dispose();
+//			displayExitStats();
+		} else {
+			displayInvalidContentHelp();
+		}
+	}
+
+	private void doMainRoutine() {
 		GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice device = env.getDefaultScreenDevice();
 
@@ -68,14 +82,6 @@ public class Feather {
 
 		JLabel currentImage = null;
 		JLabel previousImage = null;
-
-		files = new File(".").listFiles();
-
-		if (dirContainsImages()) {
-			constructDirectories();
-		} else {
-			displayInvalidContentHelp();
-		}
 
 		readyForNext = true;
 		requestedToExit = false;
@@ -145,10 +151,6 @@ public class Feather {
 			}
 		}
 
-		frame.setVisible(false);
-		frame.dispose();
-
-		// TODO inform user of operation stats
 	}
 
 	private KeyListener getDefaultKeyListener(File file, int index) {
@@ -196,7 +198,8 @@ public class Feather {
 				case 8:
 					if (!goBack) {
 						goBack = true;
-						goBackToIndex = index - 1; // TODO this is incorrect, decrementing index does not target correct previous file in files[index]
+						goBackToIndex = index - 1; // TODO this is incorrect, decrementing index does not target correct previous
+																				// file in files[index]
 						readyForNext = true;
 					} else {
 						// TODO inform user there is only one level of undo
