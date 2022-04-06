@@ -34,7 +34,7 @@ public class Feather {
 
 	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
 
-	File[] files;
+	File[] folder;
 	File lastMovedFile;
 	int lastMovedIndex;
 
@@ -49,9 +49,10 @@ public class Feather {
 	}
 
 	private Feather() {
-		files = new File(".").listFiles();
+		folder = new File(".").listFiles();
 
-		if (dirContainsImages()) {
+		if (folderContainsImages()) {
+			
 			constructDirectories();
 			doMainRoutine();
 //			displayExitStats(); // TODO collect stats during progress and display on exit
@@ -88,18 +89,18 @@ public class Feather {
 
 		File currentFile;
 
-		for (int index = 0; index < files.length; index++) {
+		for (int index = 0; index < folder.length; index++) {
 
 			if (goBack) {
 				if (lastMovedFile != null) {
 					index = lastMovedIndex;
-					files[index] = lastMovedFile;
+					folder[index] = lastMovedFile;
 				}
 				goBack = false;
 			}
 
 			if (readyForNext) {
-				currentFile = files[index];
+				currentFile = folder[index];
 
 				try {
 					if (currentFile.isFile() && isJpeg(currentFile.getName())) {
@@ -157,145 +158,8 @@ public class Feather {
 		frame.dispose();
 	}
 
-	class SingleKeyEventListener implements KeyListener {
-
-		private File file;
-		private int index;
-		private boolean keyPressed;
-
-		public SingleKeyEventListener(File file, int index) {
-			this.file = file;
-			this.index = index;
-			keyPressed = false;
-		}
-
-		@Override
-		public void keyReleased(KeyEvent e) {
-			if (keyPressed) {
-//				System.out.println("ignoring redundant keypress: " + e.getKeyCode());
-				return;
-			}
-			
-			switch (e.getKeyCode()) {
-			case 80: // P
-				moveFile(file, PARAKEET);
-				break;
-
-			case 66: // B
-				moveFile(file, BIRD);
-				break;
-
-			case 69: // E
-				moveFile(file, EMPTY);
-				break;
-
-			case 77: // M
-				moveFile(file, MAMMAL);
-				break;
-
-			case 70: // F
-				moveFile(file, FOGGY);
-				break;
-
-			case 79: // O
-				moveFile(file, OTHER);
-				break;
-
-			case 83: // S - skip: do nothing with current file
-				readyForNext = true;
-				break;
-
-			case 8: // backspace
-				if (!goBack) {
-					goBack = true;
-					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
-					readyForNext = true;
-				} else {
-					// TODO inform user there is only one level of undo
-				}
-				break;
-
-			case 27: // escape
-				requestedToExit = true;
-				break;
-			}
-			
-			// ensure no further keypresses are acted on
-			keyPressed = true;
-		}
-		
-		@Override
-		public void keyTyped(KeyEvent e) {
-		}
-
-		@Override
-		public void keyPressed(KeyEvent e) {
-		}
-	}
-
-	private KeyListener getKeyListener(File file, int index) {
-
-		return new KeyListener() {
-
-			@Override
-			public void keyTyped(KeyEvent arg0) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent arg0) {
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-				switch (e.getKeyCode()) {
-				case 80: // P
-					moveFile(file, PARAKEET);
-					break;
-
-				case 66: // B
-					moveFile(file, BIRD);
-					break;
-
-				case 69: // E
-					moveFile(file, EMPTY);
-					break;
-
-				case 77: // M
-					moveFile(file, MAMMAL);
-					break;
-
-				case 70: // F
-					moveFile(file, FOGGY);
-					break;
-
-				case 79: // O
-					moveFile(file, OTHER);
-					break;
-
-				case 83: // S - skip: do nothing with current file
-					readyForNext = true;
-					break;
-
-				case 8: // backspace
-					if (!goBack) {
-						goBack = true;
-						lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
-						readyForNext = true;
-					} else {
-						// TODO inform user there is only one level of undo
-					}
-					break;
-
-				case 27: // escape
-					requestedToExit = true;
-					break;
-				}
-			}
-		};
-	}
-
-	private boolean dirContainsImages() {
-		for (File file : files) {
+	private boolean folderContainsImages() {
+		for (File file : folder) {
 			if (isJpeg(file.getName())) {
 				return true;
 			}
@@ -361,4 +225,85 @@ public class Feather {
 	private static void displayHelp() {
 		System.out.println("run this in a folder of unsorted feeder camera images");
 	}
+
+	/**
+	 * implementation of {@link java.awt.event.KeyListener} which only allows a single keypress, ignoring all subsequent events
+	 *
+	 */
+	class SingleKeyEventListener implements KeyListener {
+		
+		private File file;
+		private int index;
+		private boolean keyPressed;
+		
+		public SingleKeyEventListener(File file, int index) {
+			this.file = file;
+			this.index = index;
+			keyPressed = false;
+		}
+		
+		@Override
+		public void keyReleased(KeyEvent e) {
+			if (keyPressed) {
+//				System.out.println("ignoring redundant keypress: " + e.getKeyCode());
+				return;
+			}
+			
+			switch (e.getKeyCode()) {
+			case 80: // P
+				moveFile(file, PARAKEET);
+				break;
+				
+			case 66: // B
+				moveFile(file, BIRD);
+				break;
+				
+			case 69: // E
+				moveFile(file, EMPTY);
+				break;
+				
+			case 77: // M
+				moveFile(file, MAMMAL);
+				break;
+				
+			case 70: // F
+				moveFile(file, FOGGY);
+				break;
+				
+			case 79: // O
+				moveFile(file, OTHER);
+				break;
+				
+			case 83: // S - skip: do nothing with current file
+				readyForNext = true;
+				break;
+				
+			case 8: // backspace
+				if (!goBack) {
+					goBack = true;
+					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
+					readyForNext = true;
+				} else {
+					// TODO inform user there is only one level of undo
+				}
+				break;
+				
+			case 27: // escape
+				requestedToExit = true;
+				break;
+			}
+			
+			// ensure no further keypresses are acted on
+			keyPressed = true;
+		}
+		
+		@Override
+		public void keyTyped(KeyEvent e) {
+		}
+		
+		@Override
+		public void keyPressed(KeyEvent e) {
+		}
+	}
+	
 }
