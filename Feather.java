@@ -36,7 +36,7 @@ public class Feather {
 
 	File[] files;
 	File lastMovedFile;
-	int goBackToIndex;
+	int lastMovedIndex;
 
 	public static void main(String[] args) {
 
@@ -54,9 +54,8 @@ public class Feather {
 		if (dirContainsImages()) {
 			constructDirectories();
 			doMainRoutine();
-			frame.setVisible(false);
-			frame.dispose();
-//			displayExitStats();
+//			displayExitStats(); // TODO collect stats during progress and display on exit
+
 		} else {
 			displayInvalidContentHelp();
 		}
@@ -87,26 +86,28 @@ public class Feather {
 		requestedToExit = false;
 		goBack = false;
 
-		for (int i = 0; i < files.length; i++) {
+		File currentFile;
+
+		for (int index = 0; index < files.length; index++) {
 
 			if (goBack) {
 				if (lastMovedFile != null) {
-					i = goBackToIndex;
-					files[i] = lastMovedFile;
+					index = lastMovedIndex;
+					files[index] = lastMovedFile;
 				}
 				goBack = false;
 			}
 
 			if (readyForNext) {
-				File file = files[i];
+				currentFile = files[index];
 
 				try {
-					if (file.isFile() && isJpeg(file.getName())) {
+					if (currentFile.isFile() && isJpeg(currentFile.getName())) {
 						readyForNext = false;
 
 						previousImage = currentImage;
 
-						Image image = ImageIO.read(file);
+						Image image = ImageIO.read(currentFile);
 
 						int imageWidth = image.getWidth(null);
 						int imageHeight = image.getHeight(null);
@@ -128,7 +129,8 @@ public class Feather {
 						for (KeyListener listener : frame.getKeyListeners()) {
 							frame.removeKeyListener(listener);
 						}
-						frame.addKeyListener(getDefaultKeyListener(file, i));
+						frame.addKeyListener(new SingleKeyEventListener(currentFile, index));
+//						frame.addKeyListener(getKeyListener(currentFile, index));
 
 						frame.setVisible(true);
 					}
@@ -151,9 +153,88 @@ public class Feather {
 			}
 		}
 
+		frame.setVisible(false);
+		frame.dispose();
 	}
 
-	private KeyListener getDefaultKeyListener(File file, int index) {
+	class SingleKeyEventListener implements KeyListener {
+
+		private File file;
+		private int index;
+		private boolean keyPressed;
+
+		public SingleKeyEventListener(File file, int index) {
+			this.file = file;
+			this.index = index;
+			keyPressed = false;
+		}
+
+		@Override
+		public void keyReleased(KeyEvent e) {
+			if (keyPressed) {
+//				System.out.println("ignoring redundant keypress: " + e.getKeyCode());
+				return;
+			}
+			
+			switch (e.getKeyCode()) {
+			case 80: // P
+				moveFile(file, PARAKEET);
+				break;
+
+			case 66: // B
+				moveFile(file, BIRD);
+				break;
+
+			case 69: // E
+				moveFile(file, EMPTY);
+				break;
+
+			case 77: // M
+				moveFile(file, MAMMAL);
+				break;
+
+			case 70: // F
+				moveFile(file, FOGGY);
+				break;
+
+			case 79: // O
+				moveFile(file, OTHER);
+				break;
+
+			case 83: // S - skip: do nothing with current file
+				readyForNext = true;
+				break;
+
+			case 8: // backspace
+				if (!goBack) {
+					goBack = true;
+					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
+					readyForNext = true;
+				} else {
+					// TODO inform user there is only one level of undo
+				}
+				break;
+
+			case 27: // escape
+				requestedToExit = true;
+				break;
+			}
+			
+			// ensure no further keypresses are acted on
+			keyPressed = true;
+		}
+		
+		@Override
+		public void keyTyped(KeyEvent e) {
+		}
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+		}
+	}
+
+	private KeyListener getKeyListener(File file, int index) {
+
 		return new KeyListener() {
 
 			@Override
@@ -195,20 +276,17 @@ public class Feather {
 					readyForNext = true;
 					break;
 
-				case 8:
+				case 8: // backspace
 					if (!goBack) {
 						goBack = true;
-						goBackToIndex = index - 1; // TODO this is incorrect, decrementing index does not target correct previous
-																				// file in files[index]
+						lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
 						readyForNext = true;
 					} else {
 						// TODO inform user there is only one level of undo
 					}
 					break;
 
-				// exit clauses
-				case 81: // Q
-				case 88: // X
+				case 27: // escape
 					requestedToExit = true;
 					break;
 				}
