@@ -6,6 +6,8 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +37,11 @@ public class Feather {
 	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 	File[] folder;
+	
+	File currentFile;
 	File lastMovedFile;
+
+	int index;
 	int lastMovedIndex;
 
 	public static void main(String[] args) {
@@ -50,9 +56,10 @@ public class Feather {
 
 	private Feather() {
 		folder = new File(".").listFiles();
+		currentFile = folder[0];
 
 		if (folderContainsImages()) {
-			
+
 			constructDirectories();
 			doMainRoutine();
 //			displayExitStats(); // TODO collect stats during progress and display on exit
@@ -71,6 +78,7 @@ public class Feather {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
 		frame.getContentPane().setBackground(Color.BLACK);
+		frame.setTitle("Pigeon Holes");
 		device.setFullScreenWindow(frame);
 
 		BufferedImage nullCursorImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
@@ -87,9 +95,21 @@ public class Feather {
 		requestedToExit = false;
 		goBack = false;
 
-		File currentFile;
+		frame.addWindowFocusListener(new WindowFocusListener() {
+			@Override
+			public void windowLostFocus(WindowEvent e) {
+				frame.setExtendedState(JFrame.ICONIFIED);
+				device.setFullScreenWindow(null);
+			}
 
-		for (int index = 0; index < folder.length; index++) {
+			@Override
+			public void windowGainedFocus(WindowEvent e) {
+				device.setFullScreenWindow(frame);
+			}
+		});
+
+		index = 0;
+		while (index < folder.length) {
 
 			if (goBack) {
 				if (lastMovedFile != null) {
@@ -131,7 +151,6 @@ public class Feather {
 							frame.removeKeyListener(listener);
 						}
 						frame.addKeyListener(new SingleKeyEventListener(currentFile, index));
-//						frame.addKeyListener(getKeyListener(currentFile, index));
 
 						frame.setVisible(true);
 					}
@@ -152,6 +171,8 @@ public class Feather {
 			if (requestedToExit) {
 				break;
 			}
+
+			index++;
 		}
 
 		frame.setVisible(false);
@@ -227,58 +248,61 @@ public class Feather {
 	}
 
 	/**
-	 * implementation of {@link java.awt.event.KeyListener} which only allows a single keypress, ignoring all subsequent events
-	 *
+	 * implementation of {@link java.awt.event.KeyListener} which only allows a
+	 * single keypress, ignoring all subsequent events
 	 */
 	class SingleKeyEventListener implements KeyListener {
-		
+
 		private File file;
 		private int index;
 		private boolean keyPressed;
-		
+
 		public SingleKeyEventListener(File file, int index) {
 			this.file = file;
 			this.index = index;
 			keyPressed = false;
 		}
-		
+
 		@Override
 		public void keyReleased(KeyEvent e) {
 			if (keyPressed) {
 //				System.out.println("ignoring redundant keypress: " + e.getKeyCode());
 				return;
 			}
-			
+
 			switch (e.getKeyCode()) {
 			case 80: // P
+				keyPressed = true;
 				moveFile(file, PARAKEET);
 				break;
-				
+
 			case 66: // B
+				keyPressed = true;
 				moveFile(file, BIRD);
 				break;
-				
+
 			case 69: // E
+				keyPressed = true;
 				moveFile(file, EMPTY);
 				break;
-				
+
 			case 77: // M
+				keyPressed = true;
 				moveFile(file, MAMMAL);
 				break;
-				
+
 			case 70: // F
+				keyPressed = true;
 				moveFile(file, FOGGY);
 				break;
-				
+
 			case 79: // O
+				keyPressed = true;
 				moveFile(file, OTHER);
 				break;
-				
-			case 83: // S - skip: do nothing with current file
-				readyForNext = true;
-				break;
-				
+
 			case 8: // backspace
+				keyPressed = true;
 				if (!goBack) {
 					goBack = true;
 					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
@@ -287,23 +311,21 @@ public class Feather {
 					// TODO inform user there is only one level of undo
 				}
 				break;
-				
+
 			case 27: // escape
 				requestedToExit = true;
 				break;
 			}
-			
-			// ensure no further keypresses are acted on
-			keyPressed = true;
+
 		}
-		
+
 		@Override
 		public void keyTyped(KeyEvent e) {
 		}
-		
+
 		@Override
 		public void keyPressed(KeyEvent e) {
 		}
 	}
-	
+
 }
