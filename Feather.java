@@ -1,11 +1,14 @@
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.FlowLayout;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.awt.image.BufferedImage;
@@ -37,7 +40,7 @@ public class Feather {
 	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 	File[] folder;
-	
+
 	File currentFile;
 	File lastMovedFile;
 
@@ -95,18 +98,8 @@ public class Feather {
 		requestedToExit = false;
 		goBack = false;
 
-		frame.addWindowFocusListener(new WindowFocusListener() {
-			@Override
-			public void windowLostFocus(WindowEvent e) {
-				frame.setExtendedState(JFrame.ICONIFIED);
-				device.setFullScreenWindow(null);
-			}
-
-			@Override
-			public void windowGainedFocus(WindowEvent e) {
-				device.setFullScreenWindow(frame);
-			}
-		});
+		frame.addWindowFocusListener(getFocusListener(device));
+		frame.addMouseMotionListener(getMouseListener(nullCursor));
 
 		index = 0;
 		while (index < folder.length) {
@@ -141,6 +134,12 @@ public class Feather {
 						image = image.getScaledInstance(imageWidth, imageHeight, Image.SCALE_DEFAULT);
 
 						currentImage = new JLabel(new ImageIcon(image));
+						currentImage.setLayout(new FlowLayout(FlowLayout.CENTER));
+
+						JLabel filenameText = new JLabel(currentFile.getName());
+						filenameText.setForeground(Color.WHITE);
+						currentImage.add(filenameText);
+
 						frame.add(currentImage);
 
 						if (previousImage != null) {
@@ -225,11 +224,11 @@ public class Feather {
 
 	private void constructDirectories() {
 		try {
-			String[] directories = { PARAKEET, MAMMAL, OTHER, EMPTY, FOGGY, BIRD };
+			String[] folders = { PARAKEET, MAMMAL, OTHER, EMPTY, FOGGY, BIRD };
 
-			for (String target : directories) {
-				if (!new File(target).exists()) {
-					Files.createDirectory(Paths.get(target));
+			for (String folder : folders) {
+				if (!new File(folder).exists()) {
+					Files.createDirectory(Paths.get(folder));
 				}
 			}
 
@@ -247,62 +246,111 @@ public class Feather {
 		System.out.println("run this in a folder of unsorted feeder camera images");
 	}
 
+	private MouseMotionListener getMouseListener(Cursor nullCursor) {
+		return new MouseMotionListener() {
+
+			@Override
+			public void mouseMoved(MouseEvent move) {
+				if (frame.getContentPane().getCursor() == nullCursor) {
+					new Thread(new Runnable() {
+						public void run() {
+							frame.getContentPane().setCursor(Cursor.getDefaultCursor());
+							try {
+								Thread.sleep(750);
+								frame.getContentPane().setCursor(nullCursor);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+					}).start();
+				}
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+			}
+		};
+	}
+
+	private WindowFocusListener getFocusListener(GraphicsDevice device) {
+		return new WindowFocusListener() {
+
+			@Override
+			public void windowLostFocus(WindowEvent e) {
+				frame.setExtendedState(JFrame.ICONIFIED);
+				device.setFullScreenWindow(null);
+			}
+
+			@Override
+			public void windowGainedFocus(WindowEvent e) {
+				device.setFullScreenWindow(frame);
+			}
+		};
+	}
+
 	/**
-	 * implementation of {@link java.awt.event.KeyListener} which only allows a
-	 * single keypress, ignoring all subsequent events
+	 * implementation of {@link java.awt.event.KeyListener KeyListener} which only
+	 * allows a single valid keypress, ignoring any other events and all subsequent
+	 * events.
 	 */
 	class SingleKeyEventListener implements KeyListener {
 
 		private File file;
 		private int index;
-		private boolean keyPressed;
+		private boolean validKeyPressed;
 
 		public SingleKeyEventListener(File file, int index) {
 			this.file = file;
 			this.index = index;
-			keyPressed = false;
+			validKeyPressed = false;
 		}
 
 		@Override
 		public void keyReleased(KeyEvent e) {
-			if (keyPressed) {
+			if (validKeyPressed) {
 //				System.out.println("ignoring redundant keypress: " + e.getKeyCode());
 				return;
 			}
 
 			switch (e.getKeyCode()) {
 			case 80: // P
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, PARAKEET);
 				break;
 
 			case 66: // B
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, BIRD);
 				break;
 
 			case 69: // E
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, EMPTY);
 				break;
 
 			case 77: // M
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, MAMMAL);
 				break;
 
 			case 70: // F
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, FOGGY);
 				break;
 
 			case 79: // O
-				keyPressed = true;
+				validKeyPressed = true;
 				moveFile(file, OTHER);
 				break;
 
 			case 8: // backspace
-				keyPressed = true;
+				if (lastMovedFile == null) {
+//					System.out.println("ignoring invalid backspace");
+					return;
+				}
+
+				validKeyPressed = true;
+
 				if (!goBack) {
 					goBack = true;
 					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
