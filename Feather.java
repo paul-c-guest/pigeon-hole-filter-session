@@ -47,6 +47,10 @@ public class Feather {
 	int index;
 	int lastMovedIndex;
 
+	// to use as the black/white balance point against (255 * 3) in
+	// getContrastingColour()
+	static int GREY_BALANCE = 318;
+
 	public static void main(String[] args) {
 
 		if (args.length > 0 && args[0].contains("h")) {
@@ -101,6 +105,8 @@ public class Feather {
 		frame.addWindowFocusListener(getFocusListener(device));
 		frame.addMouseMotionListener(getMouseListener(nullCursor));
 
+		Color colour = null;
+
 		index = 0;
 		while (index < folder.length) {
 
@@ -121,23 +127,24 @@ public class Feather {
 
 						previousImage = currentImage;
 
-						Image image = ImageIO.read(currentFile);
+						BufferedImage buffered = ImageIO.read(currentFile);
+						colour = new Color(buffered.getRGB(buffered.getWidth() / 2, 20));
 
-						int imageWidth = image.getWidth(null);
-						int imageHeight = image.getHeight(null);
+						int imageWidth = buffered.getWidth();
+						int imageHeight = buffered.getHeight();
 
 						double scaleFactor = getDownscaleFitFactor(imageWidth, imageHeight);
 
 						imageWidth = (int) (imageWidth * scaleFactor);
 						imageHeight = (int) (imageHeight * scaleFactor);
 
-						image = image.getScaledInstance(imageWidth, imageHeight, Image.SCALE_DEFAULT);
+						Image image = buffered.getScaledInstance(imageWidth, imageHeight, Image.SCALE_FAST);
 
 						currentImage = new JLabel(new ImageIcon(image));
 						currentImage.setLayout(new FlowLayout(FlowLayout.CENTER));
 
 						JLabel filenameText = new JLabel(currentFile.getName());
-						filenameText.setForeground(Color.WHITE);
+						filenameText.setForeground(getContrastingColour(colour));
 						currentImage.add(filenameText);
 
 						frame.add(currentImage);
@@ -201,6 +208,14 @@ public class Feather {
 		} catch (IOException moveException) {
 			moveException.printStackTrace();
 		}
+	}
+
+	private Color getContrastingColour(Color pixel) {
+		if (pixel == null) {
+			return Color.YELLOW;
+		}
+		int total = pixel.getBlue() + pixel.getRed() + pixel.getBlue();
+		return (total > GREY_BALANCE) ? Color.BLACK : Color.WHITE;
 	}
 
 	private double getDownscaleFitFactor(int imageWidth, int imageHeight) {
