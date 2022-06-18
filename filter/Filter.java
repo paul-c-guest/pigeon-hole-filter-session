@@ -1,6 +1,9 @@
+package filter;
+
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
@@ -22,20 +25,31 @@ import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.border.LineBorder;
 
-public class Feather {
+/**
+ * display images in a folder one by one, waiting for keyboard presses to move
+ * each to a target folder
+ * 
+ * @version 1.0
+ * @author ballsies
+ * 
+ */
+public class Filter {
 
 	private JFrame frame;
 	private boolean readyForNext;
 	private boolean requestedToExit;
 	private boolean goBack;
 
-	private static String PARAKEET = "./Parakeets";
-	private static String FOGGY = "./Foggy";
-	private static String OTHER = "./Other";
-	private static String BIRD = "./Birds";
-	private static String MAMMAL = "./Mammals";
-	private static String EMPTY = "./Empty";
+	private static Path PATH;
+
+	private static String PARAKEET = "/Parakeets";
+	private static String FOGGY = "/Foggy";
+	private static String OTHER = "/Other";
+	private static String BIRD = "/Birds";
+	private static String MAMMAL = "/Mammals";
+	private static String EMPTY = "/Empty";
 
 	private static int SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -47,10 +61,6 @@ public class Feather {
 	int index;
 	int lastMovedIndex;
 
-	// to use as the black/white balance point against (255 * 3) in
-	// getContrastingColour()
-	static int GREY_BALANCE = 318;
-
 	public static void main(String[] args) {
 
 		if (args.length > 0 && args[0].contains("h")) {
@@ -58,19 +68,23 @@ public class Feather {
 			return;
 		}
 
-		new Feather();
+		// start filtering in the current command line directory
+		new Filter(null);
 	}
 
-	private Feather() {
-		folder = new File(".").listFiles();
-		currentFile = folder[0];
+	/**
+	 * 
+	 * @param path target directory to use. can be {@link null}
+	 */
+	public Filter(Path path) {
+		PATH = path;
 
-		if (folderContainsImages()) {
+		// use a path if provided, else look in local folder
+		folder = PATH != null ? new File(path.toUri()).listFiles() : new File(".").listFiles();
 
+		if (folder.length > 0 && folderContainsImages()) {
 			constructDirectories();
 			doMainRoutine();
-//			displayExitStats(); // TODO collect stats during progress and display on exit
-
 		} else {
 			displayInvalidContentHelp();
 		}
@@ -85,7 +99,7 @@ public class Feather {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setUndecorated(true);
 		frame.getContentPane().setBackground(Color.BLACK);
-		frame.setTitle("Pigeon Holes");
+		frame.setTitle("Image Filter");
 		device.setFullScreenWindow(frame);
 
 		BufferedImage nullCursorImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
@@ -104,8 +118,6 @@ public class Feather {
 
 		frame.addWindowFocusListener(getFocusListener(device));
 		frame.addMouseMotionListener(getMouseListener(nullCursor));
-
-		Color colour = null;
 
 		index = 0;
 		while (index < folder.length) {
@@ -128,7 +140,6 @@ public class Feather {
 						previousImage = currentImage;
 
 						BufferedImage buffered = ImageIO.read(currentFile);
-						colour = new Color(buffered.getRGB(buffered.getWidth() / 2, 20));
 
 						int imageWidth = buffered.getWidth();
 						int imageHeight = buffered.getHeight();
@@ -144,7 +155,11 @@ public class Feather {
 						currentImage.setLayout(new FlowLayout(FlowLayout.CENTER));
 
 						JLabel filenameText = new JLabel(currentFile.getName());
-						filenameText.setForeground(getContrastingColour(colour));
+						filenameText.setOpaque(true);
+						filenameText.setBorder(new LineBorder(Color.BLACK, 8));
+						filenameText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 18));
+						filenameText.setBackground(Color.BLACK);
+						filenameText.setForeground(Color.WHITE);
 						currentImage.add(filenameText);
 
 						frame.add(currentImage);
@@ -185,6 +200,7 @@ public class Feather {
 		frame.dispose();
 	}
 
+	// TODO refactor using metadata extraction library used in ClusteredList
 	private boolean folderContainsImages() {
 		for (File file : folder) {
 			if (isJpeg(file.getName())) {
@@ -199,23 +215,20 @@ public class Feather {
 		return lowered.contains(".jpg") || lowered.contains(".jpeg");
 	}
 
-	private void moveFile(File file, String target) {
+	private void moveFile(File file, String newDirectory) {
 		try {
-			Path moved = Files.move(file.toPath(), Paths.get(target + "/" + file.getName()));
+			String leadingPath = PATH != null ? PATH.toString() : ".";
+
+			Path moveToPath = Path.of(leadingPath, newDirectory, file.getName());
+
+			Path moved = Files.move(file.toPath(), moveToPath);
+
 			lastMovedFile = new File(moved.toString());
 			readyForNext = true;
 
 		} catch (IOException moveException) {
 			moveException.printStackTrace();
 		}
-	}
-
-	private Color getContrastingColour(Color pixel) {
-		if (pixel == null) {
-			return Color.YELLOW;
-		}
-		int total = pixel.getBlue() + pixel.getRed() + pixel.getBlue();
-		return (total > GREY_BALANCE) ? Color.BLACK : Color.WHITE;
 	}
 
 	private double getDownscaleFitFactor(int imageWidth, int imageHeight) {
@@ -242,6 +255,7 @@ public class Feather {
 			String[] folders = { PARAKEET, MAMMAL, OTHER, EMPTY, FOGGY, BIRD };
 
 			for (String folder : folders) {
+				folder = PATH != null ? PATH.toString() + folder : "." + folder;
 				if (!new File(folder).exists()) {
 					Files.createDirectory(Paths.get(folder));
 				}
@@ -253,12 +267,12 @@ public class Feather {
 	}
 
 	private static void displayInvalidContentHelp() {
-		System.out.println("there aren't any valid images to process in this folder");
+		System.out.println("There aren't any images in this folder.");
 		displayHelp();
 	}
 
 	private static void displayHelp() {
-		System.out.println("run this in a folder of unsorted feeder camera images");
+		System.out.println("Run this in a folder of unsorted images.");
 	}
 
 	private MouseMotionListener getMouseListener(Cursor nullCursor) {
@@ -368,7 +382,7 @@ public class Feather {
 
 				if (!goBack) {
 					goBack = true;
-					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position!
+					lastMovedIndex = index - 1; // TODO 'index - 1' will not always step back to correct position?
 					readyForNext = true;
 				} else {
 					// TODO inform user there is only one level of undo
